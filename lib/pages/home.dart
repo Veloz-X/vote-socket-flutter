@@ -1,11 +1,11 @@
 import 'dart:io';
 
-import 'package:band_name/models/band.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:pie_chart/pie_chart.dart';
 import 'package:provider/provider.dart';
 
+import '../models/candidate.dart';
 import '../services/socket_service.dart';
 
 class HomePage extends StatefulWidget {
@@ -16,24 +16,25 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<Band> bands = [];
+  List<Candidate> candidates = [];
 
   @override
   void initState() {
     final socketService = Provider.of<SocketService>(context, listen: false);
-    socketService.socket.on('active-bands', _handleActiveBands);
+    socketService.socket.on('active-candidates', _handleActiveCandidates);
     super.initState();
   }
 
-  _handleActiveBands(dynamic payload) {
-    this.bands = (payload as List).map((band) => Band.fromMap(band)).toList();
+  _handleActiveCandidates(dynamic payload) {
+    this.candidates =
+        (payload as List).map((candidate) => Candidate.fromMap(candidate)).toList();
     setState(() {});
   }
 
   @override
   void dispose() {
     final socketService = Provider.of<SocketService>(context, listen: false);
-    socketService.socket.off('active-bands');
+    socketService.socket.off('active-candidates');
     super.dispose();
   }
 
@@ -56,14 +57,14 @@ class _HomePageState extends State<HomePage> {
           Container(
             margin: EdgeInsets.only(right: 10),
             child: (socketService.serverStatus == ServerStatus.Online)
-                ? Icon(Icons.wifi_rounded ,color: Colors.green[400])
-                : Icon(Icons.wifi_off_outlined ,color: Colors.red),
+                ? Icon(Icons.wifi_rounded, color: Colors.green[400])
+                : Icon(Icons.wifi_off_outlined, color: Colors.red),
           )
         ],
       ),
       body: Column(
         children: <Widget>[
-          if (bands.isNotEmpty)
+          if (candidates.isNotEmpty)
             _showGraph()
           else
             Container(
@@ -72,45 +73,48 @@ class _HomePageState extends State<HomePage> {
               child: Center(
                 child: Text(
                   'No hay Candidatos',
-                  style: TextStyle(color: Colors.black54, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.black54,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ),
           Expanded(
             child: ListView.builder(
-              itemCount: bands.length,
-              itemBuilder: (context, i) => _bandTile(bands[i]),
+              itemCount: candidates.length,
+              itemBuilder: (context, i) => _candidateTile(candidates[i]),
             ),
           )
         ],
       ),
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.add),
-        onPressed: addNewBand,
+        onPressed: addNewCandidate,
         elevation: 1,
       ),
     );
   }
 
   Widget _showGraph() {
-  Map<String, double> dataMap =new Map();
-  bands.forEach((band) {
-    dataMap.putIfAbsent(band.name, () => band.votes.toDouble());
-  });
-  return Container(
-    padding: EdgeInsets.only(top: 10),
-    width: double.infinity,
-    height: 200,
-    child: PieChart(dataMap: dataMap)) ;
-}
+    Map<String, double> dataMap = new Map();
+    candidates.forEach((candidate) {
+      dataMap.putIfAbsent(candidate.name, () => candidate.votes.toDouble());
+    });
+    return Container(
+        padding: EdgeInsets.only(top: 10),
+        width: double.infinity,
+        height: 200,
+        child: PieChart(dataMap: dataMap));
+  }
 
-  Widget _bandTile(Band band) {
+  Widget _candidateTile(Candidate candidate) {
     final socketService = Provider.of<SocketService>(context, listen: false);
     return Dismissible(
-      key: Key(band.id),
+      key: Key(candidate.id),
       direction: DismissDirection.startToEnd,
       onDismissed: (_) =>
-          socketService.socket.emit('delete-band', {'id': band.id}),
+          socketService.socket.emit('delete-candidate', {'id': candidate.id}),
       background: Container(
         color: Colors.red,
         child: Align(
@@ -126,21 +130,21 @@ class _HomePageState extends State<HomePage> {
       ),
       child: ListTile(
           leading: CircleAvatar(
-            child: Text(band.name.substring(0, 2)),
+            child: Text(candidate.name.substring(0, 2)),
             backgroundColor: Colors.blue[100],
           ),
-          title: Text(band.name),
+          title: Text(candidate.name),
           trailing: Text(
-            '${band.votes}',
+            '${candidate.votes}',
             style: TextStyle(fontSize: 20),
           ),
           onTap: () {
-            socketService.socket.emit('vote-band', {'id': band.id});
+            socketService.socket.emit('vote-candidate', {'id': candidate.id});
           }),
     );
   }
 
-  addNewBand() {
+  addNewCandidate() {
     final textController = new TextEditingController();
     if (Platform.isAndroid) {
       return showDialog(
@@ -156,7 +160,7 @@ class _HomePageState extends State<HomePage> {
                     child: Text('Añadir'),
                     elevation: 5,
                     textColor: Colors.blue,
-                    onPressed: () => addBandToList(textController.text),
+                    onPressed: () => addCandidateToList(textController.text),
                   ),
                 ],
               ));
@@ -174,7 +178,7 @@ class _HomePageState extends State<HomePage> {
               CupertinoDialogAction(
                 child: Text('Añadir'),
                 isDefaultAction: true,
-                onPressed: () => addBandToList(textController.text),
+                onPressed: () => addCandidateToList(textController.text),
               ),
               CupertinoDialogAction(
                 child: Text('Cancelar'),
@@ -186,15 +190,11 @@ class _HomePageState extends State<HomePage> {
         });
   }
 
-  void addBandToList(String name) {
+  void addCandidateToList(String name) {
     if (name.length > 1) {
-      // this.bands.add(Band(id: DateTime.now().toString(), name: name, votes: 0));
-      // setState(() {}); // refresh the UI
       final socketService = Provider.of<SocketService>(context, listen: false);
-      socketService.socket.emit('add-band', {'name': name});
+      socketService.socket.emit('add-candidate', {'name': name});
     }
     Navigator.pop(context);
   }
 }
-
-

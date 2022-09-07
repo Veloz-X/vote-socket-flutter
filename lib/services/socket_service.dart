@@ -26,12 +26,12 @@ class SocketService with ChangeNotifier {
       'autoConnect': true,
     });
     this._socket.onConnect((_) {
-      print('connect');
+      print('CONECTADO CON EL SERVIDOR');
       this._serverStatus = ServerStatus.Online;
       notifyListeners();
     });
     this._socket.onDisconnect((_) {
-      print('disconnect');
+      print('DESCONECTADO CON EL SERVIDOR');
       this._serverStatus = ServerStatus.Offline;
       notifyListeners();
     });
